@@ -1,0 +1,193 @@
+多项式相乘系数形式：O(n^2)
+点值形式：O(n)
+
+通过多项式系数与点值形式的变换，使得多项式系数乘法时间复杂度降为O(nlgn)
+
+
+系数表达 -> 点值表达 O(nlgn)
+						      -> 乘积 O(n) -> 系数表达 O(nlgn)
+系数表达 -> 点值表达 O(nlgn)
+
+
+引入复数：	wn = exp(2*pi*i/n) = cos(2*pi*i/n) + sin(2*pi*i/n) * i
+
+通过消去定理降次实现递归：T(n) = 2 * T(n/2) + O(n);
+A[0]:偶数下标系数(a0,a2,a4...)
+A[1]:奇数下标系数(a1,a3,a5...)
+
+A(x) = A[0](x^2) + xA[1](x^2)
+
+消去定理：(Wdn)^dk = (Wn)^k 将原问题转换为两个规模与 原来相同 的子问题
+折半定理：(wn)^(k+n/2)^2 = (wn)^k^2 利用蝴蝶操作（wn^(k+n/2）= - (wn)^k)，两子问题规模减半
+
+递归伪代码：
+RECURSIVE_FFT(A)
+	n = A.length
+	if(n == 1) return A
+	A[0] = (a0,a2,a4...)
+	A[1] = (a1,a3,a5...)
+	RECURSIVE_FFT(A[0])
+	RECURSIVE_FFT(A[1])
+	w = 1;
+	wk = exp(2*pi*i/n)
+	for k = 0 to n/2-1
+		Ak = A[0]k + w*A[1]k
+		A(k+n/2) = A[0]k - w*A[1]k
+		w = w*wk
+	return A
+
+迭代伪代码：
+ITERATIVE_FFT(A)
+	 n = A.length
+	 BIT_REVERSE_COPY(A)
+	 for s = 1 to log2(n)
+	 	m = 2^s
+	 	wm = exp(2*pi*i/n)
+	 	for(k = 0 to n by m)
+	 		w = 1
+	 		for(j = 0 to m/2-1)
+	 			t = w * A[k+j+m/2]
+	 			u = A[k+j]
+	 			A[k+j] = u+t
+	 			A[k+j+m/2] = u-t
+	 			w = w*wm
+	 return A
+
+
+
+
+
+
+
+
+
+
+#include<cstdio>
+#include<complex>
+#include<iostream>
+#define pi acos(-1.0)
+using namespace std;
+typedef complex<double> Complex;
+
+/*int rev(int index,int len){
+	int ans = 0;
+	for(int i = log2(len); i >= 0; i--){
+		ans |= (index & 1) << i;
+		index >>= 1;
+	}
+	return ans;
+}*/
+int rev(int index,int len){
+	int ans = 0;
+	for(int i=0; (1<<i) < len; i++){
+		ans <<= 1;
+		ans |= (index & 1);
+		index >>= 1;
+	}
+	return ans;
+}
+
+Complex* FFT(Complex *A,int len,int f){
+	for(int i = 0; i < len; i++){
+		int j=rev(i,len);
+		if(i < j) swap(A[i],A[j]);
+	}
+	
+	for(int s = 1; (1 << s) <= len; s++){
+		int m = 1 << s;
+		Complex wn = Complex(cos(2 * pi * f / m),sin(2 * pi * f / m));
+		for(int k = 0; k < len; k += m){
+			Complex w = Complex(1,0);
+			for(int j = 0; j < (m >> 1); j++){
+				Complex t = w * A[k + j + (m >> 1)];
+				Complex u = A[k + j];
+				A[k + j] = u + t;
+				A[k + j + (m >> 1)] = u - t;
+				w = w * wn;
+			}
+		}
+	}
+	if(f == -1) for(int i = 0; i < len; i++) A[i] /= len;
+	return A;
+}
+
+
+
+
+//应用：大数相乘  buaaoj ModricWang's FFT : EASY VERSION
+
+
+#include<cstdio>
+#include<complex>
+#include<iostream>
+#define pi acos(-1.0)
+#define max(x,y) x>y?x:y
+using namespace std;
+typedef complex<double> Complex;
+int rev(int index,int len){
+	int ans = 0;
+	for(int i=0; (1<<i) < len; i++){
+		ans <<= 1;
+		ans |= (index & 1);
+		index >>= 1;
+	}
+	return ans;
+}
+Complex* FFT(Complex *A,int len,int f){
+	for(int i = 0; i < len; i++){
+		int j=rev(i,len);
+		if(i < j) swap(A[i],A[j]);
+	}
+	for(int s = 1; (1 << s) <= len; s++){
+		int m = 1 << s;
+		Complex wn = Complex(cos(2 * pi * f / m),sin(2 * pi * f / m));
+		for(int k = 0; k < len; k += m){
+			Complex w = Complex(1,0);
+			for(int j = 0; j < (m >> 1); j++){
+				Complex t = w * A[k + j + (m >> 1)];
+				Complex u = A[k + j];
+				A[k + j] = u + t;
+				A[k + j + (m >> 1)] = u - t;
+				w = w * wn;
+			}
+		}
+	}
+	if(f == -1) for(int i = 0; i < len; i++) A[i] /= len;
+	return A;
+}
+char s1[100007],s2[100007];
+Complex* a = new Complex[200007];
+Complex* b = new Complex[200007];
+int ans[200007];
+int main(){
+	scanf("%s%s",s1,s2);
+	int len1=0,len2=0;
+	while(s1[len1]!='\0') len1++;
+	while(s2[len2]!='\0') len2++;
+	for(int i = 0;i < len1; i++) a[i] = Complex(s1[len1-i-1] - '0',0);
+	for(int i = 0;i < len2; i++) b[i] = Complex(s2[len2-i-1] - '0',0);
+	
+	int len = 1, m=max(len1,len2);
+	while(len < m) len <<= 1;
+	len <<= 1;//向上填充多项式，并且保证len为2的幂 
+	
+	for(int i = len1;i < len; i++) a[i] = Complex(0,0);
+	for(int i = len2;i < len; i++) b[i] = Complex(0,0);
+	
+	
+	
+	a = FFT(a,len,1);
+	b = FFT(b,len,1);
+	for(int i = 0; i < len; i++) a[i] = a[i] * b[i];
+	a = FFT(a,len,-1);
+	int p=0;
+	for(int i = 0; i < len; i++){
+		ans[i] = a[i].real() + p + 0.5;//四舍五入 
+		p = ans[i] / 10;
+		ans[i] %= 10;
+	}
+	
+	while(!ans[len-1]) len--;
+	for(int i=len-1;i >=0; i--) printf("%d",ans[i]);
+	printf("\n");
+} 
