@@ -1,0 +1,279 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cassert>
+typedef int ElemType;
+typedef enum ColorType {RED,BLACK} ColorType;
+typedef struct RB_Node{
+	ElemType key;
+	RB_Node *p;
+	RB_Node* left;
+	RB_Node* right;
+	ColorType color;
+}RB_Node;
+typedef struct RB_Tree{
+	RB_Node *root;
+	RB_Node *nil;
+}RB_Tree;
+
+RB_Tree* RB_INITIAL();
+void LEFT_ROTATE(RB_Tree* T,RB_Node* x);
+void RIGHT_ROTATE(RB_Tree* T,RB_Node* x);
+void RB_INSERT_FIXUP(RB_Tree* T,RB_Node* z);
+void RB_INSERT(RB_Tree* T,ElemType key);
+void RB_TRANSPLANT(RB_Tree* T,RB_Node* u,RB_Node* v);
+RB_Node* TREE_SEARCH(RB_Tree* T,ElemType key);
+RB_Node* TREE_SUCCESSOR(RB_Tree *T,ElemType key);
+RB_Node* TREE_PREDECESSOR(RB_Tree *T,ElemType key);
+RB_Node* TREE_MAXIMUM(RB_Tree* T,RB_Node* z);
+RB_Node* TREE_MINIMUM(RB_Tree* T,RB_Node* z);
+void RB_DELETE_FIXUP(RB_Tree* T,RB_Node* x);
+void RB_DELETE(RB_Tree* T,ElemType key);
+void PRE_PRINT(RB_Tree* T,RB_Node* x);
+
+
+
+RB_Tree* RB_INITIAL(){
+	RB_Tree *T = (RB_Tree*)malloc(sizeof(RB_Tree));
+	assert(T != NULL);
+	
+	T->nil = (RB_Node*)malloc(sizeof(RB_Node));
+	assert(T->nil != NULL);
+	T->nil->p = T->nil->right = T->nil->left = NULL;
+	T->nil->color = BLACK;
+	T->root = T->nil;
+	return T;
+}
+void LEFT_ROTATE(RB_Tree* T,RB_Node* x){
+	RB_Node* y = x->right;
+	x->right = y->left;
+	if(y->left != T->nil) y->left->p = x;
+	y->p = x->p;
+	if(x->p == T->nil) T->root = y;
+	else if(x == x->p->left) x->p->left = y;
+	else x->p->right = y;
+	y->left = x;
+	x->p = y;
+}
+void RIGHT_ROTATE(RB_Tree* T,RB_Node* x){
+	RB_Node* y = x->left;
+	x->left = y->right;
+	if(y->right != T->nil) y->right->p = x;
+	y->p = x->p;
+	if(x->p == T->nil) T->root = y;
+	else if(x == x->p->right) x->p->right = y;
+	else x->p->left = y;
+	y->right = x;
+	x->p = y;
+}
+void RB_INSERT_FIXUP(RB_Tree* T,RB_Node* z){
+	while(z->p->color == RED){
+		if(z->p == z->p->p->left){
+			RB_Node* y = z->p->p->right;
+			if(y->color == RED){
+				z->p->color = BLACK;
+				y->color = BLACK;
+				z->p->p->color = RED;
+				z = z->p->p;
+			}
+			else{
+				if(z == z->p->right){
+					z = z->p;
+					LEFT_ROTATE(T,z);
+				}
+				z->p->color = BLACK;
+				z->p->p->color = RED;
+				RIGHT_ROTATE(T,z->p->p);
+			}
+		}
+		else{
+			RB_Node* y = z->p->p->left;
+			if(y->color == RED){
+				y->color = z->p->color = BLACK;
+				z->p->p->color = RED;
+				z = z->p->p;
+			}
+			else{
+				if(z == z->p->left){
+					z = z->p;
+					RIGHT_ROTATE(T,z);
+				}
+				z->p->color = BLACK;
+				z->p->p->color = RED;
+				LEFT_ROTATE(T,z->p->p);
+			}
+		}
+	}
+	T->root->color = BLACK;
+}
+void RB_INSERT(RB_Tree* T,ElemType key){
+	RB_Node* z = (RB_Node*)malloc(sizeof(RB_Node));
+	z->key = key;
+	
+	RB_Node* y = T->nil;
+	RB_Node* x = T->root;
+	while(x != T->nil){
+		y = x;
+		if(z->key < x->key) x = x->left;
+		else x = x->right;
+	}
+	z->p = y;
+	if(y == T->nil) T->root = z;
+	else if(z->key < y->key) y->left = z;
+	else y->right = z;
+	z->left = T->nil;
+	z->right = T->nil;
+	z->color = RED;
+	RB_INSERT_FIXUP(T,z);
+}
+void RB_TRANSPLANT(RB_Tree* T,RB_Node* u,RB_Node* v){
+	if(u->p == T->nil) T->root = v;
+	else if(u == u->p->left) u->p->left = v;
+	else u->p->right = v;
+	v->p = u->p;
+}
+RB_Node* TREE_SEARCH(RB_Tree* T,ElemType key){
+	RB_Node* p = T->root;
+	while(p != T->nil){
+		if(p->key == key) return p;
+		else if(p->key > key) p = p->left;
+		else p = p->right;
+	}
+	return T->nil;
+}
+RB_Node* TREE_SUCCESSOR(RB_Tree *T,ElemType key){
+	RB_Node* x = TREE_SEARCH(T,key);
+	if(x->right != T->nil) return TREE_MINIMUM(T,x->right);
+	RB_Node* y = x->p;
+	while(y != T->nil && x == y->right){
+		x = y;
+		y = y->p;
+	}
+	return y;
+}
+RB_Node* TREE_PREDECESSOR(RB_Tree *T,ElemType key){
+	RB_Node* x = TREE_SEARCH(T,key);
+	if(x->left != T->nil) return TREE_MAXIMUM(T,x->left);
+	RB_Node* y = x->p;
+	while(y != T->nil && x == y->left){
+		x = y;
+		y = y->p;
+	}
+	return y;
+}
+RB_Node* TREE_MAXIMUM(RB_Tree* T,RB_Node* z){
+	while(z->right != T->nil){
+		z = z->right;
+	}
+	return z;
+}
+RB_Node* TREE_MINIMUM(RB_Tree* T,RB_Node* z){
+	while(z->left != T->nil){
+		z = z->left;
+	}
+	return z;
+}
+void RB_DELETE_FIXUP(RB_Tree* T,RB_Node* x){
+	while(x != T->root && x->color ==BLACK){
+		if(x == x->p->left){
+			RB_Node* w = x->p->right;
+			if(w->color == RED){
+				w->color = BLACK;
+				x->p->color = RED;
+				LEFT_ROTATE(T,x->p);
+				w = x->p->right;
+			}
+			if(w->left->color == BLACK && w->right->color == BLACK){
+				w->color = RED;
+				x = x->p;	
+			}
+			else{
+				if(w->right->color == BLACK){
+					w->left->color = BLACK;
+					w->color = RED;
+					RIGHT_ROTATE(T,w);
+					w = x->p->right;
+				}
+				w->color = x->p->color;
+				x->p->color = BLACK;
+				w->right->color = BLACK;
+				LEFT_ROTATE(T,x->p);
+				x = T->root; //to end the loop 
+			} 	
+		}
+		else{
+			RB_Node* w = x->p->left;
+			if(w->color == RED){
+				w->color = BLACK;
+				x->p->color = RED;
+				RIGHT_ROTATE(T,x->p);
+				w = x->p->left;
+			}
+			if(w->right->color == BLACK && w->left->color == BLACK){
+				w->color = RED;
+				x = x->p;	
+			}
+			else{
+				if(w->left->color == BLACK){
+					w->right->color = BLACK;
+					w->color = RED;
+					LEFT_ROTATE(T,w);
+					w = x->p->left;
+				}
+				w->color = x->p->color;
+				x->p->color = BLACK;
+				w->left->color = BLACK;
+				RIGHT_ROTATE(T,x->p);
+				x = T->root; //to end the loop 
+			} 
+		}
+	}
+	x->color = BLACK;
+}
+void RB_DELETE(RB_Tree* T,ElemType key){
+	RB_Node* z = TREE_SEARCH(T,key);
+	if(z == T->nil) return;
+	RB_Node* x,* y = z;
+	ColorType y_original_color = y->color;
+	if(z->left == T->nil){
+		x = z->right;
+		RB_TRANSPLANT(T,z,z->right);
+	}
+	else if(z->right == T->nil){
+		x = z->left;
+		RB_TRANSPLANT(T,z,z->left);
+	}
+	else{
+		y = TREE_MINIMUM(T,z->right);
+		y_original_color = y->color;
+		x = y->right;
+		if(y->p == z) x->p = y;
+		else{
+			RB_TRANSPLANT(T,y,y->right);
+			y->right = z->right;
+			y->right->p = y;
+		}
+		RB_TRANSPLANT(T,z,y);
+		y->left = z->left;
+		y->left->p = y;
+		y->color = z->color;
+	}
+	if(y_original_color == BLACK) RB_DELETE_FIXUP(T,x);
+}
+void PRE_PRINT(RB_Tree* T,RB_Node* x){
+	if(x == T->nil) return;
+	else{
+		if(x->color==RED) printf("%dR ",x->key);
+		else printf("%dB ",x->key);
+		PRE_PRINT(T,x->left);
+		PRE_PRINT(T,x->right);
+	}
+}
+int main(){
+	RB_Tree* T = RB_INITIAL();
+	//for(int i=0;i<10;i++) RB_INSERT(T,i);
+	for(int i=10;i>0;i--) RB_INSERT(T,i);
+	RB_DELETE(T,3);
+	RB_DELETE(T,7);
+	PRE_PRINT(T,T->root);
+	printf("\n%d\n",TREE_PREDECESSOR(T,6)->key);
+}
